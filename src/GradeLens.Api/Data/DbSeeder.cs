@@ -81,9 +81,42 @@ public static class DbSeeder
             }
         ];
 
+        // Seed one submission already graded and routed to NeedsReview so the
+        // review queue (Approve/Override UI) is testable immediately after setup.
+        var criteria = rubric.Criteria;
+        var needsReview = new Submission
+        {
+            Id = Guid.NewGuid(),
+            AssignmentId = assignment.Id,
+            StudentIdentifier = "S1004",
+            AnswerText =
+                "Normalization means organizing tables to avoid repeating data. 1NF is about atomic values I believe. " +
+                "2NF and 3NF both deal with dependencies between columns but I always mix up which is which. " +
+                "An example violation is a table storing several phone numbers in one cell.",
+            Status = GradingStatus.NeedsReview,
+            Grade = new Grade
+            {
+                Confidence = 0.58,
+                FeedbackText = "Partial understanding: 1NF and its example are correct, but 2NF/3NF are conflated. Review partial vs transitive dependencies.",
+                GradedBy = "ai",
+                CriterionScores =
+                [
+                    new CriterionScore { CriterionId = criteria[0].Id, Points = 2, Justification = "Mentions avoiding repeated data but not anomalies." },
+                    new CriterionScore { CriterionId = criteria[1].Id, Points = 2, Justification = "1NF acceptable; 2NF and 3NF admitted to be confused." },
+                    new CriterionScore { CriterionId = criteria[2].Id, Points = 2, Justification = "One valid example (1NF); none for 2NF/3NF." },
+                    new CriterionScore { CriterionId = criteria[3].Id, Points = 2, Justification = "Readable but hedged and imprecise." }
+                ]
+            }
+        };
+        submissions.Add(needsReview);
+
         db.Courses.Add(course);
         db.Rubrics.Add(rubric);
         db.Submissions.AddRange(submissions);
+        db.AuditEntries.AddRange(
+            new AuditEntry { SubmissionId = needsReview.Id, Action = "Pending -> Grading", Actor = "system" },
+            new AuditEntry { SubmissionId = needsReview.Id, Action = "Grading -> NeedsReview", Actor = "system",
+                             DetailsJson = """{"Confidence":0.58,"threshold":0.75,"seeded":true}""" });
         await db.SaveChangesAsync();
     }
 }
