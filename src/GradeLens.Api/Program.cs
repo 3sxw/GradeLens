@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GradeLens.Api.Data;
 using GradeLens.Api.Domain;
 using GradeLens.Api.Services;
@@ -9,10 +10,20 @@ builder.Services.AddDbContext<GradeLensDbContext>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("GradeLens")));
 builder.Services.AddScoped<IGradingService, StubGradingService>();
 builder.Services.AddScoped<GradingPipeline>();
+builder.Services.ConfigureHttpJsonOptions(o =>
+    o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<GradeLensDbContext>();
+    await db.Database.MigrateAsync();
+    await DbSeeder.SeedAsync(db);
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -45,6 +56,12 @@ app.MapPost("/assignments/{assignmentId:guid}/submissions", async (GradeLensDbCo
     await db.SaveChangesAsync();
     return Results.Created($"/submissions/{submission.Id}", submission);
 });
+
+app.MapGet("/assignments/{assignmentId:guid}/submissions", (GradeLensDbContext db, Guid assignmentId) =>
+    db.Submissions
+        .Where(s => s.AssignmentId == assignmentId)
+        .Include(s => s.Grade!).ThenInclude(g => g.CriterionScores)
+        .ToListAsync());
 
 app.MapGet("/submissions/{id:guid}", async (GradeLensDbContext db, Guid id) =>
     await db.Submissions
