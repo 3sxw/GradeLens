@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<GradeLensDbContext>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("GradeLens")));
+builder.Services.AddHttpClient(); // IHttpClientFactory for the /system/grader probe
 if (builder.Configuration.GetValue("Grading:Provider", "Ai") == "Stub")
 {
     builder.Services.AddScoped<IGradingService, StubGradingService>();
@@ -50,7 +51,11 @@ app.MapPost("/courses", async (GradeLensDbContext db, Course course) =>
 });
 
 app.MapGet("/courses", (GradeLensDbContext db) =>
-    db.Courses.Include(c => c.Assignments).ToListAsync());
+    db.Courses
+        .Include(c => c.Assignments)
+        .ThenInclude(a => a.Rubric!)
+        .ThenInclude(r => r.Criteria.OrderBy(cr => cr.SortOrder))
+        .ToListAsync());
 
 // --- Rubrics ---
 app.MapPost("/assignments/{assignmentId:guid}/rubric", async (GradeLensDbContext db, Guid assignmentId, Rubric rubric) =>
@@ -94,6 +99,25 @@ app.MapGet("/review-queue", (GradeLensDbContext db) =>
 
 app.MapPost("/submissions/{id:guid}/override", (GradingPipeline pipeline, Guid id, OverrideRequest request) =>
     pipeline.OverrideAsync(id, request.Reviewer, request.Reason, request.RevisedScores));
+
+// --- System ---
+// Proxies the AI service health check so the dashboard can show which grading
+// engine is active (the browser cannot reach the AI service cross-origin).
+app.MapGet("/system/grader", async (IConfiguration config, IHttpClientFactory httpFactory) =>
+{
+    var baseUrl = config.GetValue("Grading:AiServiceUrl", "http://localhost:8000")!;
+    try
+    {
+        using var client = httpFactory.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(3);
+        var health = await client.GetFromJsonAsync<Dictionary<string, string>>($"{baseUrl}/health");
+        return Results.Ok(new { grader = health?["grader"] ?? "unknown" });
+    }
+    catch
+    {
+        return Results.Ok(new { grader = "offline" });
+    }
+});
 
 // --- Audit ---
 app.MapGet("/submissions/{id:guid}/audit", (GradeLensDbContext db, Guid id) =>

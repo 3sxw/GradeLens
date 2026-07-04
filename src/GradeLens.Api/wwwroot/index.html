@@ -3,88 +3,470 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GradeLens</title>
+<title>GradeLens — AI-assisted grading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8;
-          --ok:#4ade80; --warn:#facc15; --bad:#f87171; }
+  :root {
+    --bg: #f4f7fa;
+    --surface: #ffffff;
+    --border: #e4e9f0;
+    --text: #17222e;
+    --muted: #5f7183;
+    --accent: #0f8a7c;
+    --accent-dark: #0c6e63;
+    --accent-soft: #e6f4f2;
+    --amber-bg: #fdf3d8;  --amber-text: #8a5a00;
+    --green-bg: #dff3e9;  --green-text: #0c6b46;
+    --red-bg: #fde8e8;    --red-text: #b42318;
+    --gray-bg: #eef1f5;   --gray-text: #5f7183;
+    --shadow: 0 1px 2px rgba(23,34,46,.05), 0 4px 16px rgba(23,34,46,.06);
+    --shadow-lg: 0 8px 40px rgba(23,34,46,.16);
+    --radius: 14px;
+  }
   * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--text); }
-  header { padding:1rem 2rem; border-bottom:1px solid #334155; display:flex; align-items:baseline; gap:1rem; }
-  h1 { margin:0; font-size:1.3rem; } h1 span { color:var(--accent); }
-  header small { color:var(--muted); }
-  main { max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
-  h2 { font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:1.5rem 0 .75rem; }
-  .card { background:var(--card); border:1px solid #334155; border-radius:10px; padding:1rem; margin-bottom:.75rem; }
-  .row { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
-  .badge { padding:.15rem .6rem; border-radius:999px; font-size:.75rem; font-weight:600; }
-  .Pending{background:#334155} .Grading{background:#334155} .Published{background:#14532d;color:var(--ok)}
-  .NeedsReview{background:#422006;color:var(--warn)} .Failed{background:#450a0a;color:var(--bad)}
-  button { background:var(--accent); color:#082f49; border:0; border-radius:6px; padding:.45rem .9rem;
-           font-weight:600; cursor:pointer; } button:hover { filter:brightness(1.1); }
-  button.secondary { background:#334155; color:var(--text); }
-  .muted { color:var(--muted); font-size:.85rem; }
-  .answer { margin:.5rem 0; font-size:.9rem; color:var(--muted); }
-  table { width:100%; border-collapse:collapse; margin-top:.5rem; font-size:.85rem; }
-  td, th { text-align:left; padding:.3rem .5rem; border-top:1px solid #334155; }
-  .conf { font-variant-numeric:tabular-nums; }
+  html { -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 400 15px/1.55 "Inter", -apple-system, system-ui, sans-serif; }
+  .serif { font-family: "Fraunces", Georgia, serif; }
+
+  /* ---------- header ---------- */
+  header { position: sticky; top: 0; z-index: 20; background: var(--surface);
+           border-bottom: 1px solid var(--border); }
+  .header-inner { max-width: 1060px; margin: 0 auto; padding: 14px 28px;
+                  display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px;
+          letter-spacing: -.02em; }
+  .logo-mark { width: 32px; height: 32px; border-radius: 9px; background: var(--accent);
+               color: #fff; display: grid; place-items: center; font-size: 15px; font-weight: 700; }
+  .logo em { font-style: normal; color: var(--accent); }
+  .header-meta { display: flex; align-items: center; gap: 18px; font-size: 13px; color: var(--muted); }
+  .grader-pill { display: flex; align-items: center; gap: 7px; background: var(--accent-soft);
+                 color: var(--accent-dark); font-weight: 600; padding: 5px 12px; border-radius: 999px; }
+  .grader-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #1d3557; color: #fff;
+            display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+
+  /* ---------- layout ---------- */
+  main { max-width: 1060px; margin: 0 auto; padding: 36px 28px 80px; }
+  .hero h1 { margin: 0 0 6px; font-size: 34px; font-weight: 600; letter-spacing: -.01em; }
+  .hero p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 26px 0 8px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+          padding: 16px 18px; box-shadow: var(--shadow); }
+  .stat .num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .stat .lbl { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .stat.accent .num { color: var(--accent-dark); }
+  .stat.warn .num { color: var(--amber-text); }
+
+  section h2 { font-size: 20px; font-weight: 600; margin: 38px 0 6px; letter-spacing: -.01em; }
+  section .sub { color: var(--muted); font-size: 13.5px; margin: 0 0 16px; }
+
+  .assignment-card { background: var(--surface); border: 1px solid var(--border);
+                     border-radius: var(--radius); box-shadow: var(--shadow);
+                     padding: 20px 24px; margin-top: 24px; }
+  .assignment-card .course { font-size: 12.5px; font-weight: 600; color: var(--accent-dark);
+                             text-transform: uppercase; letter-spacing: .06em; }
+  .assignment-card h3 { margin: 4px 0 6px; font-size: 17px; }
+  .assignment-card p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  /* ---------- submission cards ---------- */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+          box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 14px;
+          transition: opacity .25s, transform .25s; }
+  .card.leaving { opacity: 0; transform: translateY(-6px); }
+  .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .who { display: flex; align-items: center; gap: 12px; }
+  .who .initials { width: 38px; height: 38px; border-radius: 50%; background: var(--accent-soft);
+                   color: var(--accent-dark); font-weight: 700; font-size: 13px;
+                   display: grid; place-items: center; }
+  .who .name { font-weight: 600; }
+  .who .time { font-size: 12.5px; color: var(--muted); }
+  .actions { display: flex; align-items: center; gap: 10px; }
+
+  .badge { padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .badge.Pending     { background: var(--gray-bg);  color: var(--gray-text); }
+  .badge.Grading     { background: var(--gray-bg);  color: var(--gray-text); }
+  .badge.NeedsReview { background: var(--amber-bg); color: var(--amber-text); }
+  .badge.Published   { background: var(--green-bg); color: var(--green-text); }
+  .badge.Failed      { background: var(--red-bg);   color: var(--red-text); }
+
+  .answer { margin: 14px 0 0; font-size: 14px; color: #37485a; background: #f8fafc;
+            border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; }
+
+  .grade-block { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .score-row { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0;
+               font-size: 13.5px; }
+  .score-row .pts { font-weight: 700; white-space: nowrap; min-width: 72px; }
+  .score-row .just { color: var(--muted); }
+  .grade-meta { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap;
+                font-size: 13px; color: var(--muted); }
+  .total-chip { background: var(--accent-soft); color: var(--accent-dark); font-weight: 700;
+                padding: 4px 12px; border-radius: 8px; font-size: 13px; }
+  .conf-wrap { display: flex; align-items: center; gap: 8px; }
+  .conf-bar { width: 90px; height: 6px; border-radius: 999px; background: var(--gray-bg); overflow: hidden; }
+  .conf-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+  .conf-bar.low i { background: #d97706; }
+  .feedback { margin-top: 10px; font-size: 13.5px; color: var(--muted); font-style: italic; }
+
+  /* ---------- buttons ---------- */
+  button { font: 600 13.5px "Inter", sans-serif; border-radius: 9px; padding: 9px 16px;
+           cursor: pointer; border: 1px solid transparent; position: relative;
+           transition: background .15s, box-shadow .15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+  .btn-outline { background: var(--surface); color: var(--text); border-color: #cbd5e1; }
+  .btn-outline:hover:not(:disabled) { background: #f1f5f9; }
+  .btn-ghost { background: transparent; color: var(--muted); }
+  button:disabled { opacity: .6; cursor: not-allowed; }
+  button.loading { color: transparent !important; pointer-events: none; }
+  button.loading::after { content: ""; position: absolute; inset: 0; margin: auto;
+    width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+    animation: spin .7s linear infinite; }
+  button.btn-outline.loading::after { border-color: #cbd5e1; border-top-color: var(--accent); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty { border: 1.5px dashed #cbd5e1; border-radius: var(--radius); padding: 28px;
+           text-align: center; color: var(--muted); font-size: 14px; background: transparent; }
+
+  /* ---------- modal ---------- */
+  .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.45); backdrop-filter: blur(3px);
+             display: grid; place-items: center; z-index: 50; opacity: 0; pointer-events: none;
+             transition: opacity .18s; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .modal { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-lg);
+           width: min(560px, calc(100vw - 40px)); max-height: 86vh; overflow: auto;
+           padding: 26px 28px; transform: translateY(10px) scale(.98); transition: transform .18s; }
+  .overlay.open .modal { transform: none; }
+  .modal h3 { margin: 0 0 4px; font-size: 19px; }
+  .modal .sub { margin: 0 0 18px; color: var(--muted); font-size: 13.5px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--muted);
+                 margin-bottom: 6px; }
+  .field input, .field textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 9px;
+    padding: 9px 12px; font: 400 14px "Inter", sans-serif; color: var(--text); background: #fff; }
+  .field input:focus, .field textarea:focus { outline: 2px solid var(--accent-soft);
+    border-color: var(--accent); }
+  .crit-row { display: flex; align-items: center; gap: 12px; padding: 9px 0;
+              border-bottom: 1px solid var(--border); }
+  .crit-row:last-of-type { border-bottom: 0; }
+  .crit-row .desc { flex: 1; font-size: 13.5px; }
+  .crit-row .max { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .crit-row input { width: 64px; text-align: center; border: 1px solid #cbd5e1;
+                    border-radius: 8px; padding: 7px 6px; font: 600 14px "Inter", sans-serif; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .modal .error-note { color: var(--red-text); font-size: 13px; margin-top: 10px; display: none; }
+
+  /* ---------- toasts ---------- */
+  #toasts { position: fixed; bottom: 22px; right: 22px; z-index: 100; display: flex;
+            flex-direction: column; gap: 10px; }
+  .toast { background: #17222e; color: #f1f5f9; border-radius: 12px; padding: 12px 18px;
+           font-size: 13.5px; font-weight: 500; box-shadow: var(--shadow-lg);
+           display: flex; align-items: center; gap: 10px; min-width: 260px; max-width: 360px;
+           animation: toast-in .25s cubic-bezier(.2,.9,.3,1.2); }
+  .toast.out { opacity: 0; transform: translateY(8px); transition: all .3s; }
+  .toast .icon { width: 20px; height: 20px; border-radius: 50%; flex: none;
+                 display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+  .toast.success .icon { background: var(--green-bg); color: var(--green-text); }
+  .toast.error .icon { background: var(--red-bg); color: var(--red-text); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } }
+
+  .skeleton { color: var(--muted); padding: 40px 0; text-align: center; }
+  @media (max-width: 720px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 </style>
 </head>
 <body>
-<header><h1>Grade<span>Lens</span></h1><small>AI-assisted grading with human-in-the-loop review</small></header>
+
+<header>
+  <div class="header-inner">
+    <div class="logo"><span class="logo-mark">GL</span>Grade<em>Lens</em></div>
+    <div class="header-meta">
+      <span class="grader-pill"><span class="dot"></span><span id="grader-name">grader</span></span>
+      <span class="avatar">IN</span>
+    </div>
+  </div>
+</header>
+
 <main>
-  <div id="assignment" class="muted">Loading…</div>
-  <h2>Submissions</h2>
-  <div id="subs"></div>
-  <h2>Review queue</h2>
-  <div id="queue" class="muted"></div>
+  <div class="hero">
+    <h1 class="serif">Welcome back.</h1>
+    <p>AI-assisted grading with human-in-the-loop review — every grade validated, routed, and audited.</p>
+  </div>
+
+  <div class="stats" id="stats"></div>
+  <div id="assignment"></div>
+
+  <section>
+    <h2 class="serif">Review queue</h2>
+    <p class="sub">Low-confidence grades held for a human decision. Approve as-is, or override with revised scores.</p>
+    <div id="queue"><div class="skeleton">Loading…</div></div>
+  </section>
+
+  <section>
+    <h2 class="serif">All submissions</h2>
+    <p class="sub">Every submission for this assignment, with its full AI assessment.</p>
+    <div id="subs"><div class="skeleton">Loading…</div></div>
+  </section>
 </main>
+
+<!-- Override modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 class="serif">Override grade</h3>
+    <p class="sub" id="modal-sub"></p>
+    <div id="crit-rows"></div>
+    <div class="field" style="margin-top:16px">
+      <label for="ov-reviewer">Reviewer</label>
+      <input id="ov-reviewer" value="instructor@example.com">
+    </div>
+    <div class="field">
+      <label for="ov-reason">Reason (required — recorded in the audit trail)</label>
+      <textarea id="ov-reason" rows="3" placeholder="e.g. The answer covers 2NF correctly; AI under-scored criterion 2."></textarea>
+    </div>
+    <div class="error-note" id="modal-error"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="ov-save" onclick="submitOverride(this)">Save &amp; publish</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
 <script>
-const api = (p, opts) => fetch(p, opts).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-let assignmentId, criteria = {};
+'use strict';
 
-async function load() {
+const state = { course: null, assignment: null, criteria: [], subs: [], modalSub: null };
+
+async function api(path, options) {
+  const response = await fetch(path, options);
+  if (!response.ok) {
+    let detail = `Request failed (${response.status})`;
+    try { detail = (await response.json()).detail || detail; } catch {}
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+/* ---------- toasts ---------- */
+function toast(message, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="icon">${type === 'success' ? '✓' : '!'}</span><span>${message}</span>`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 350); }, 3800);
+}
+
+/* ---------- loading-state wrapper: spinner on, action, refresh, toast ---------- */
+async function withLoading(button, action, successMessage) {
+  button.classList.add('loading');
+  button.disabled = true;
+  try {
+    await action();
+    await refresh();
+    toast(successMessage, 'success');
+  } catch (err) {
+    toast(err.message || 'Something went wrong.', 'error');
+    button.classList.remove('loading');
+    button.disabled = false;
+  }
+}
+
+/* ---------- data ---------- */
+async function refresh() {
   const courses = await api('/courses');
-  const a = courses[0].assignments[0];
-  assignmentId = a.id;
-  document.getElementById('assignment').innerHTML =
-    `<div class="card"><strong>${courses[0].name}</strong> — ${a.title}<div class="answer">${a.questionText}</div></div>`;
-  const subs = await api(`/assignments/${assignmentId}/submissions`);
-  document.getElementById('subs').innerHTML = subs.map(renderSub).join('');
-  const queue = await api('/review-queue');
+  state.course = courses[0];
+  state.assignment = state.course.assignments[0];
+  state.criteria = (state.assignment.rubric && state.assignment.rubric.criteria) || [];
+  state.subs = await api(`/assignments/${state.assignment.id}/submissions`);
+  render();
+}
+
+/* ---------- rendering ---------- */
+function render() {
+  const subs = state.subs;
+  const count = status => subs.filter(s => s.status === status).length;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="num">${subs.length}</div><div class="lbl">Submissions</div></div>
+    <div class="stat accent"><div class="num">${count('Published')}</div><div class="lbl">Published</div></div>
+    <div class="stat warn"><div class="num">${count('NeedsReview')}</div><div class="lbl">Needs review</div></div>
+    <div class="stat"><div class="num">${count('Pending') + count('Failed')}</div><div class="lbl">Awaiting grading</div></div>`;
+
+  document.getElementById('assignment').innerHTML = `
+    <div class="assignment-card">
+      <div class="course">${state.course.name}</div>
+      <h3>${state.assignment.title}</h3>
+      <p>${state.assignment.questionText}</p>
+    </div>`;
+
+  const queue = subs.filter(s => s.status === 'NeedsReview');
   document.getElementById('queue').innerHTML = queue.length
-    ? queue.map(s => renderSub(s, true)).join('')
-    : 'Empty — nothing needs human attention.';
+    ? queue.map(s => card(s, true)).join('')
+    : `<div class="empty">✨ Queue is clear — nothing needs human attention.</div>`;
+
+  document.getElementById('subs').innerHTML = subs.length
+    ? subs.map(s => card(s, false)).join('')
+    : `<div class="empty">No submissions yet.</div>`;
 }
 
-function renderSub(s, inQueue) {
+function card(s, inQueue) {
   const g = s.grade;
-  const gradeHtml = g ? `
-    <table>${g.criterionScores.map(cs =>
-      `<tr><td>${cs.points} pts</td><td class="muted">${cs.justification}</td></tr>`).join('')}</table>
-    <div class="muted" style="margin-top:.4rem">Confidence <span class="conf">${g.confidence}</span>
-      · graded by ${g.gradedBy} · ${g.feedbackText}</div>` : '';
-  const action = s.status === 'Pending' || s.status === 'Failed'
-    ? `<button onclick="grade('${s.id}')">Grade with AI</button>`
-    : inQueue ? `<button onclick="approve('${s.id}')">Approve &amp; publish</button>` : '';
-  return `<div class="card">
-    <div class="row"><strong>${s.studentIdentifier}</strong>
-      <span><span class="badge ${s.status}">${s.status}</span> ${action}</span></div>
-    <div class="answer">${s.answerText}</div>${gradeHtml}</div>`;
+  const initials = s.studentIdentifier.slice(0, 2).toUpperCase();
+  const submitted = new Date(s.submittedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+  let gradeHtml = '';
+  if (g) {
+    const total = g.criterionScores.reduce((sum, cs) => sum + cs.points, 0);
+    const max = state.criteria.reduce((sum, c) => sum + c.maxPoints, 0);
+    const lowConf = g.confidence < 0.75;
+    gradeHtml = `
+      <div class="grade-block">
+        ${g.criterionScores.map(cs => {
+          const crit = state.criteria.find(c => c.id === cs.criterionId);
+          return `<div class="score-row">
+            <span class="pts">${cs.points} / ${crit ? crit.maxPoints : '?'} pts</span>
+            <span class="just">${crit ? crit.description + ' — ' : ''}${cs.justification}</span>
+          </div>`;
+        }).join('')}
+        <div class="grade-meta">
+          <span class="total-chip">Total ${total} / ${max}</span>
+          <span class="conf-wrap">Confidence
+            <span class="conf-bar ${lowConf ? 'low' : ''}"><i style="width:${Math.round(g.confidence * 100)}%"></i></span>
+            ${g.confidence.toFixed(2)}</span>
+          <span>Graded by <strong>${g.gradedBy}</strong></span>
+        </div>
+        <div class="feedback">${g.feedbackText}</div>
+      </div>`;
+  }
+
+  let actions = '';
+  if (s.status === 'Pending' || s.status === 'Failed')
+    actions = `<button class="btn-primary" onclick="gradeSubmission('${s.id}', this)">Grade with AI</button>`;
+  else if (inQueue)
+    actions = `<button class="btn-outline" onclick="openModal('${s.id}')">Override</button>
+               <button class="btn-primary" onclick="approve('${s.id}', this)">Approve</button>`;
+
+  return `
+    <div class="card" id="card-${inQueue ? 'q' : 's'}-${s.id}">
+      <div class="card-top">
+        <div class="who">
+          <span class="initials">${initials}</span>
+          <div><div class="name">${s.studentIdentifier}</div><div class="time">Submitted ${submitted}</div></div>
+        </div>
+        <div class="actions"><span class="badge ${s.status}">${s.status}</span>${actions}</div>
+      </div>
+      <div class="answer">${s.answerText}</div>
+      ${gradeHtml}
+    </div>`;
 }
 
-async function grade(id) {
-  await api(`/submissions/${id}/grade`, { method: 'POST' });
-  load();
+/* ---------- actions ---------- */
+function gradeSubmission(id, button) {
+  withLoading(button,
+    () => api(`/submissions/${id}/grade`, { method: 'POST' }),
+    'Submission graded — routing applied.');
 }
 
-async function approve(id) {
-  await api(`/submissions/${id}/override`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reviewer: 'reviewer@gradelens.dev', reason: 'Approved AI grade as-is', revisedScores: {} })
+function approve(id, button) {
+  const el = document.getElementById(`card-q-${id}`);
+  if (el) el.classList.add('leaving');
+  withLoading(button,
+    () => api(`/submissions/${id}/override`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer: 'instructor@example.com', reason: 'Approved AI grade as-is', revisedScores: {} })
+    }),
+    'Grade approved and published.');
+}
+
+/* ---------- override modal ---------- */
+function openModal(id) {
+  const s = state.subs.find(x => x.id === id);
+  if (!s || !s.grade) return;
+  state.modalSub = s;
+
+  document.getElementById('modal-sub').textContent =
+    `Revise the AI scores for ${s.studentIdentifier}. The override is published immediately and logged in the audit trail.`;
+  document.getElementById('crit-rows').innerHTML = state.criteria.map(c => {
+    const current = s.grade.criterionScores.find(cs => cs.criterionId === c.id);
+    return `<div class="crit-row">
+      <span class="desc">${c.description}</span>
+      <span class="max">max ${c.maxPoints}</span>
+      <input type="number" min="0" max="${c.maxPoints}" value="${current ? current.points : 0}" data-crit="${c.id}">
+    </div>`;
+  }).join('');
+  document.getElementById('ov-reason').value = '';
+  document.getElementById('modal-error').style.display = 'none';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  state.modalSub = null;
+}
+
+async function submitOverride(button) {
+  const reason = document.getElementById('ov-reason').value.trim();
+  const reviewer = document.getElementById('ov-reviewer').value.trim();
+  const errorNote = document.getElementById('modal-error');
+
+  const revisedScores = {};
+  let invalid = false;
+  document.querySelectorAll('#crit-rows input').forEach(input => {
+    const points = Number(input.value);
+    const max = Number(input.max);
+    if (!Number.isInteger(points) || points < 0 || points > max) invalid = true;
+    revisedScores[input.dataset.crit] = points;
   });
-  load();
+
+  if (!reason) { errorNote.textContent = 'A reason is required — it goes on the audit record.'; errorNote.style.display = 'block'; return; }
+  if (!reviewer) { errorNote.textContent = 'Reviewer is required.'; errorNote.style.display = 'block'; return; }
+  if (invalid) { errorNote.textContent = 'Each score must be a whole number within its criterion range.'; errorNote.style.display = 'block'; return; }
+  errorNote.style.display = 'none';
+
+  const id = state.modalSub.id;
+  button.classList.add('loading');
+  button.disabled = true;
+  try {
+    await api(`/submissions/${id}/override`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reviewer, reason, revisedScores })
+    });
+    closeModal();
+    await refresh();
+    toast('Override saved — grade published.', 'success');
+  } catch (err) {
+    errorNote.textContent = err.message;
+    errorNote.style.display = 'block';
+  } finally {
+    button.classList.remove('loading');
+    button.disabled = false;
+  }
 }
-load();
+
+document.getElementById('overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ---------- boot ---------- */
+(async () => {
+  api('/system/grader')
+    .then(info => { document.getElementById('grader-name').textContent = info.grader; })
+    .catch(() => { document.getElementById('grader-name').textContent = 'grading service offline'; });
+  try {
+    await refresh();
+  } catch (err) {
+    toast(err.message, 'error');
+    document.getElementById('queue').innerHTML = '<div class="empty">Could not load data — is the API running?</div>';
+    document.getElementById('subs').innerHTML = '';
+  }
+})();
 </script>
 </body>
 </html>

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gradelens-api",
+      "runtimeExecutable": "/Users/abdulrahmanabdullah/.dotnet/dotnet",
+      "runtimeArgs": ["run", "--project", "src/GradeLens.Api", "--no-launch-profile"],
+      "env": { "ASPNETCORE_ENVIRONMENT": "Development", "ASPNETCORE_URLS": "http://localhost:5080", "DOTNET_ROOT": "/Users/abdulrahmanabdullah/.dotnet" },
+      "port": 5080
+    }
+  ]
+}
