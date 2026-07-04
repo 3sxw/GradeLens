@@ -1,12 +1,15 @@
-"""GradeLens AI grading service (Week 2 skeleton).
+"""GradeLens AI grading service.
 
-Receives a submission + rubric from the .NET API, calls Claude with a
-rubric-constrained structured-output prompt, validates the response, and
-returns per-criterion scores with a confidence estimate.
+Receives a submission + rubric from the .NET API and returns per-criterion
+scores with a confidence estimate. Uses Claude when ANTHROPIC_API_KEY is set,
+otherwise falls back to a deterministic offline heuristic grader — see
+graders.py for both implementations.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+
+from graders import get_grader
 
 app = FastAPI(title="GradeLens AI Service")
 
@@ -35,32 +38,30 @@ class GradeResponse(BaseModel):
     scores: list[CriterionScore]
     confidence: float = Field(ge=0.0, le=1.0)
     feedback_text: str
+    grader: str
     raw_model_response: str
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "grader": get_grader().model_name}
 
 
 @app.post("/grade", response_model=GradeResponse)
 def grade(request: GradeRequest) -> GradeResponse:
-    # TODO Week 2:
-    #   1. Assemble rubric-constrained prompt (see prompts/grading_v1.md).
-    #   2. Call Claude (claude-sonnet-5) with tool-use to force structured JSON.
-    #   3. Validate scores against criterion max_points; retry on violations.
-    #   4. Self-consistency: sample N=3, confidence = 1 - normalized score spread.
-    #   5. Embedding similarity vs exemplar_answer as an independent signal.
+    if not request.criteria:
+        raise HTTPException(status_code=422, detail="Rubric has no criteria.")
+
+    grader = get_grader()
+    try:
+        scores, confidence, feedback, raw = grader.grade(request)
+    except Exception as exc:  # surfaced to the .NET side, which marks the submission Failed
+        raise HTTPException(status_code=502, detail=f"Grading failed: {exc}") from exc
+
     return GradeResponse(
-        scores=[
-            CriterionScore(
-                criterion_id=c.id,
-                points=0,
-                justification="AI grading not yet implemented.",
-            )
-            for c in request.criteria
-        ],
-        confidence=0.0,
-        feedback_text="AI grading not yet implemented.",
-        raw_model_response="{}",
+        scores=[CriterionScore(**s) for s in scores],
+        confidence=min(1.0, max(0.0, confidence)),
+        feedback_text=feedback,
+        grader=grader.model_name,
+        raw_model_response=raw,
     )

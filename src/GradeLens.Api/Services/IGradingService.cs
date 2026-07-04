@@ -10,5 +10,5 @@ public record GradingResult(
 
 public interface IGradingService
 {
-    Task<GradingResult> GradeAsync(Submission submission, Rubric rubric, CancellationToken ct = default);
+    Task<GradingResult> GradeAsync(Submission submission, Rubric rubric, string questionText, CancellationToken ct = default);
 }

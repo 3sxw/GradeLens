@@ -9,7 +9,7 @@ namespace GradeLens.Api.Services;
 /// </summary>
 public class StubGradingService : IGradingService
 {
-    public Task<GradingResult> GradeAsync(Submission submission, Rubric rubric, CancellationToken ct = default)
+    public Task<GradingResult> GradeAsync(Submission submission, Rubric rubric, string questionText, CancellationToken ct = default)
     {
         var rng = new Random(submission.Id.GetHashCode());
         var scores = rubric.Criteria

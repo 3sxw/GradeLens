@@ -8,7 +8,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<GradeLensDbContext>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("GradeLens")));
-builder.Services.AddScoped<IGradingService, StubGradingService>();
+if (builder.Configuration.GetValue("Grading:Provider", "Ai") == "Stub")
+{
+    builder.Services.AddScoped<IGradingService, StubGradingService>();
+}
+else
+{
+    builder.Services.AddHttpClient<IGradingService, AiGradingService>(c =>
+    {
+        c.BaseAddress = new Uri(builder.Configuration.GetValue("Grading:AiServiceUrl", "http://localhost:8000")!);
+        c.Timeout = TimeSpan.FromSeconds(120); // Claude self-consistency = multiple model calls
+    });
+}
 builder.Services.AddScoped<GradingPipeline>();
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -27,6 +38,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseSwagger();
 app.UseSwaggerUI();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 // --- Courses & assignments ---
 app.MapPost("/courses", async (GradeLensDbContext db, Course course) =>

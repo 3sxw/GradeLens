@@ -1,0 +1,52 @@
+{
+  "question_text": "Explain the purpose of database normalization and describe the first three normal forms with an example of a violation of each.",
+  "exemplar_answer": "Normalization organizes relational data to reduce redundancy and prevent update, insert, and delete anomalies. 1NF requires atomic column values and no repeating groups — storing a comma-separated list of phone numbers in one column violates it. 2NF requires 1NF plus no partial dependency of non-key attributes on part of a composite key — in an OrderItems(OrderId, ProductId, ProductName) table, ProductName depends only on ProductId, violating 2NF. 3NF requires 2NF plus no transitive dependencies — an Employees table storing DepartmentId and DepartmentName violates 3NF because DepartmentName depends on DepartmentId, not the employee key.",
+  "criteria": [
+    { "id": "purpose", "description": "Explains the purpose of normalization (redundancy, anomalies)", "max_points": 4 },
+    { "id": "definitions", "description": "Correctly defines 1NF, 2NF, and 3NF", "max_points": 6 },
+    { "id": "examples", "description": "Gives a valid violation example for each normal form", "max_points": 6 },
+    { "id": "clarity", "description": "Clarity and technical accuracy of writing", "max_points": 4 }
+  ],
+  "answers": [
+    {
+      "id": "gold-01",
+      "answer_text": "Normalization structures tables so each fact is stored once, which removes redundancy and prevents update, insert, and delete anomalies. 1NF demands atomic values — a cell holding 'red, blue, green' violates it. 2NF forbids partial dependencies on a composite key — ProductName in an order-lines table keyed by (OrderId, ProductId) violates it. 3NF forbids transitive dependencies — keeping DepartmentName beside DepartmentId in Employees violates it.",
+      "human_scores": { "purpose": 4, "definitions": 6, "examples": 6, "clarity": 4 }
+    },
+    {
+      "id": "gold-02",
+      "answer_text": "The point of normalization is to avoid storing duplicated data so updates happen in one place and anomalies are prevented. First normal form requires atomic column values. Second normal form removes partial dependencies on a composite key. Third normal form removes transitive dependencies, for example storing a city's country in a customers table.",
+      "human_scores": { "purpose": 4, "definitions": 5, "examples": 2, "clarity": 4 }
+    },
+    {
+      "id": "gold-03",
+      "answer_text": "Normalization makes the database faster by splitting tables. 1NF is when the table has a primary key. 2NF is when it has foreign keys. 3NF is when all the tables are joined. For example a students table with a key is in 1NF.",
+      "human_scores": { "purpose": 0, "definitions": 0, "examples": 0, "clarity": 1 }
+    },
+    {
+      "id": "gold-04",
+      "answer_text": "Normalization reduces redundancy in relational databases. 1NF: atomic values only, no repeating groups. 2NF: every non-key attribute depends on the whole key. 3NF: no transitive dependencies. I don't have examples but these are the definitions.",
+      "human_scores": { "purpose": 2, "definitions": 6, "examples": 0, "clarity": 3 }
+    },
+    {
+      "id": "gold-05",
+      "answer_text": "Databases should be normalized to avoid anomalies when inserting, updating, or deleting rows, and to reduce duplicated facts. 1NF means atomic values; a comma-separated phone list breaks it. 2NF means no partial key dependency; storing a product's name in an order-items table breaks it. 3NF means no transitive dependency; storing a department name with its id in the employee table breaks it. Together they keep each fact in exactly one place.",
+      "human_scores": { "purpose": 4, "definitions": 6, "examples": 6, "clarity": 4 }
+    },
+    {
+      "id": "gold-06",
+      "answer_text": "Normalization is about organizing data. The first normal form says data should be simple values. I think the second and third forms are about keys but I am not sure of the details.",
+      "human_scores": { "purpose": 1, "definitions": 1, "examples": 0, "clarity": 2 }
+    },
+    {
+      "id": "gold-07",
+      "answer_text": "Purpose: reduce redundancy and prevent update anomalies. 1NF = atomic values (violated by lists in a cell). 2NF = no partial dependency (violated when an attribute depends on part of a composite key). 3NF = no transitive dependency (violated when a non-key attribute depends on another non-key attribute).",
+      "human_scores": { "purpose": 3, "definitions": 6, "examples": 4, "clarity": 4 }
+    },
+    {
+      "id": "gold-08",
+      "answer_text": "Normalization prevents data duplication. An example of bad design is one giant spreadsheet table with everything in it. Splitting it into related tables with keys is normalization. The normal forms are steps of this process from first to third.",
+      "human_scores": { "purpose": 2, "definitions": 1, "examples": 1, "clarity": 2 }
+    }
+  ]
+}

@@ -16,6 +16,7 @@ public class GradingPipeline(GradeLensDbContext db, IGradingService grader, ICon
     public async Task<Submission> ProcessAsync(Guid submissionId, CancellationToken ct = default)
     {
         var submission = await db.Submissions.FirstAsync(s => s.Id == submissionId, ct);
+        var assignment = await db.Assignments.FirstAsync(a => a.Id == submission.AssignmentId, ct);
         var rubric = await db.Rubrics
             .Include(r => r.Criteria)
             .FirstAsync(r => r.AssignmentId == submission.AssignmentId, ct);
@@ -25,7 +26,7 @@ public class GradingPipeline(GradeLensDbContext db, IGradingService grader, ICon
 
         try
         {
-            var result = await grader.GradeAsync(submission, rubric, ct);
+            var result = await grader.GradeAsync(submission, rubric, assignment.QuestionText, ct);
 
             submission.Grade = new Grade
             {

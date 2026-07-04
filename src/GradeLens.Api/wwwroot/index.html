@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GradeLens</title>
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --text:#e2e8f0; --muted:#94a3b8; --accent:#38bdf8;
+          --ok:#4ade80; --warn:#facc15; --bad:#f87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:-apple-system,system-ui,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:1rem 2rem; border-bottom:1px solid #334155; display:flex; align-items:baseline; gap:1rem; }
+  h1 { margin:0; font-size:1.3rem; } h1 span { color:var(--accent); }
+  header small { color:var(--muted); }
+  main { max-width:960px; margin:0 auto; padding:1.5rem 2rem; }
+  h2 { font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:1.5rem 0 .75rem; }
+  .card { background:var(--card); border:1px solid #334155; border-radius:10px; padding:1rem; margin-bottom:.75rem; }
+  .row { display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; }
+  .badge { padding:.15rem .6rem; border-radius:999px; font-size:.75rem; font-weight:600; }
+  .Pending{background:#334155} .Grading{background:#334155} .Published{background:#14532d;color:var(--ok)}
+  .NeedsReview{background:#422006;color:var(--warn)} .Failed{background:#450a0a;color:var(--bad)}
+  button { background:var(--accent); color:#082f49; border:0; border-radius:6px; padding:.45rem .9rem;
+           font-weight:600; cursor:pointer; } button:hover { filter:brightness(1.1); }
+  button.secondary { background:#334155; color:var(--text); }
+  .muted { color:var(--muted); font-size:.85rem; }
+  .answer { margin:.5rem 0; font-size:.9rem; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; margin-top:.5rem; font-size:.85rem; }
+  td, th { text-align:left; padding:.3rem .5rem; border-top:1px solid #334155; }
+  .conf { font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<header><h1>Grade<span>Lens</span></h1><small>AI-assisted grading with human-in-the-loop review</small></header>
+<main>
+  <div id="assignment" class="muted">Loading…</div>
+  <h2>Submissions</h2>
+  <div id="subs"></div>
+  <h2>Review queue</h2>
+  <div id="queue" class="muted"></div>
+</main>
+<script>
+const api = (p, opts) => fetch(p, opts).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+let assignmentId, criteria = {};
+
+async function load() {
+  const courses = await api('/courses');
+  const a = courses[0].assignments[0];
+  assignmentId = a.id;
+  document.getElementById('assignment').innerHTML =
+    `<div class="card"><strong>${courses[0].name}</strong> — ${a.title}<div class="answer">${a.questionText}</div></div>`;
+  const subs = await api(`/assignments/${assignmentId}/submissions`);
+  document.getElementById('subs').innerHTML = subs.map(renderSub).join('');
+  const queue = await api('/review-queue');
+  document.getElementById('queue').innerHTML = queue.length
+    ? queue.map(s => renderSub(s, true)).join('')
+    : 'Empty — nothing needs human attention.';
+}
+
+function renderSub(s, inQueue) {
+  const g = s.grade;
+  const gradeHtml = g ? `
+    <table>${g.criterionScores.map(cs =>
+      `<tr><td>${cs.points} pts</td><td class="muted">${cs.justification}</td></tr>`).join('')}</table>
+    <div class="muted" style="margin-top:.4rem">Confidence <span class="conf">${g.confidence}</span>
+      · graded by ${g.gradedBy} · ${g.feedbackText}</div>` : '';
+  const action = s.status === 'Pending' || s.status === 'Failed'
+    ? `<button onclick="grade('${s.id}')">Grade with AI</button>`
+    : inQueue ? `<button onclick="approve('${s.id}')">Approve &amp; publish</button>` : '';
+  return `<div class="card">
+    <div class="row"><strong>${s.studentIdentifier}</strong>
+      <span><span class="badge ${s.status}">${s.status}</span> ${action}</span></div>
+    <div class="answer">${s.answerText}</div>${gradeHtml}</div>`;
+}
+
+async function grade(id) {
+  await api(`/submissions/${id}/grade`, { method: 'POST' });
+  load();
+}
+
+async function approve(id) {
+  await api(`/submissions/${id}/override`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reviewer: 'reviewer@gradelens.dev', reason: 'Approved AI grade as-is', revisedScores: {} })
+  });
+  load();
+}
+load();
+</script>
+</body>
+</html>
