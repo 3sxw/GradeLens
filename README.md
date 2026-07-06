@@ -1,4 +1,5 @@
 # GradeLens
+<img width="800" height="463" alt="ScreenRecording1448-01-20at4 35 24AM-ezgif com-gif-maker" src="https://github.com/user-attachments/assets/6a773ec8-7a2d-4776-a177-26c6cf12cbf0" />
 
 **AI-assisted assessment & feedback engine with human-in-the-loop review.**
 
